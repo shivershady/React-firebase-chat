@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import {AuthContext} from "./context/auth";
 import {useContext} from "react";
 import Profile from "./pages/Profile";
+import Message from "./pages/Message";
 
 function App() {
     const {user} = useContext(AuthContext);
@@ -31,6 +32,7 @@ function App() {
                     <Route path="/login" element={<Login/>}/>
                     <Route path="/register" element={<Register/>}/>
                     <Route path="/profile" element={<Profile />}/>
+                    <Route path="/chat/:id" element={<Message />}/>
                 </Routes>
             </BrowserRouter>
     );
