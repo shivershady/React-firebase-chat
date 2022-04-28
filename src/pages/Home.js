@@ -1,13 +1,22 @@
 import React, {useEffect, useState} from 'react';
-import {collection, onSnapshot, query, where} from "firebase/firestore";
+import {
+    collection,
+    onSnapshot,
+    query,
+    orderBy,
+    where
+} from "firebase/firestore";
 import {db, auth} from "../firebase";
 import User from "../Components/User";
 import Message from "./Message";
-import {useNavigate} from "react-router-dom";
 
-function Home(props) {
+function Home() {
     const [users, setUsers] = useState([]);
-    let navigate = useNavigate();
+    const [chatFriend, setChatFriend] = useState('');
+    const [msgs, setMsgs] = useState([]);
+    const userId = auth.currentUser.uid;
+
+
     useEffect(() => {
         const userRef = collection(db, 'users');
         const q = query(userRef, where("uid", "not-in", [auth.currentUser.uid]));
@@ -18,12 +27,24 @@ function Home(props) {
             });
             setUsers(users);
         });
+        return () => unsub();
     }, [])
 
-    const [chatFriend, setChatFriend] = useState([]);
-    const selectUser = (user) => {
+    const selectUser = async (user) => {
         setChatFriend(user);
+        const friendId = user.uid;
+        const id = userId > friendId ? `${friendId + userId}` : `${userId + friendId}`;
+        const msgsRef = collection(db, "chats", id, "mess");
+        const q = query(msgsRef, orderBy("createdAt", "asc"));
+        onSnapshot(q, (querySnapshot) => {
+            let msgs = [];
+            querySnapshot.forEach((doc) => {
+                msgs.push(doc.data());
+            });
+            setMsgs(msgs);
+        });
     }
+
     return (
         <div className="container mx-auto bg-gray-400">
             {!chatFriend.name && users.map((user) => {
@@ -31,7 +52,7 @@ function Home(props) {
                     <User key={user.uid} user={user} selectUser={selectUser}/>
                 )
             })}
-            {chatFriend.name && <Message friend={chatFriend}/>}
+            {chatFriend.name && <Message friend={chatFriend} msgs={msgs} backHome={()=>setChatFriend('')}/>}
         </div>
     );
 }

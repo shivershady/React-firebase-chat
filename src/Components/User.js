@@ -1,7 +1,9 @@
-import React from 'react';
+import React , {useState ,useEffect} from 'react';
 import Avatar from '../assets/images/user.png';
+import { onSnapshot, doc } from "firebase/firestore";
+import {db} from "../firebase";
 
-function User({user , selectUser}) {
+function User({user, selectUser}) {
     return (
         <div className="flex items-center gap-8 py-4 ml-4" onClick={()=>selectUser(user)}>
             <div className="flex justify-start items-center gap-6">

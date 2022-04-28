@@ -5,24 +5,18 @@ import {useState} from "react";
 import {
     addDoc,
     collection,
-    getDoc,
+    setDoc,
     doc,
-    updateDoc,
-    onSnapshot,
     Timestamp,
-    query,
-    orderBy,
-    where
 } from "firebase/firestore";
 import {deleteObject, getDownloadURL, ref, uploadBytes} from "firebase/storage";
-import Camera from "../assets/images/Camera";
 
-function Message({friend}) {
+function Message({friend,msgs, backHome}) {
     const userId = auth.currentUser.uid;
     const [message, setMessage] = useState('');
     const [imgMess, setImgMess] = useState('');
-    const [msgs, setMsgs] = useState('');
     const friendId = friend.uid;
+
     const handleMessage = async (e) => {
         e.preventDefault();
         if (!message && !imgMess) {
@@ -30,10 +24,12 @@ function Message({friend}) {
             return;
         }
         let urlImg;
-        const collectionRef = collection(db, "chats");
+
+        const id = userId > friendId ? friendId + userId : userId + friendId;
+        const collectionRef = collection(db, "chats", id , "mess");
         try {
             if (imgMess) {
-                const imgFile = `messageImg/${Date.now()} - ${imgMess.name}`;
+                const imgFile = `images/${Date.now()} - ${imgMess.name}`;
                 const imgRef = ref(storage, imgFile);
                 const snap = await uploadBytes(imgRef, imgMess, imgFile);
                 const pathRef = ref(storage, snap.ref.fullPath);
@@ -47,60 +43,42 @@ function Message({friend}) {
                 media: urlImg || "",
                 createdAt: Timestamp.fromDate(new Date())
             });
+            await setDoc(doc(db, "lastMsg", id), {
+                message: message,
+                from: userId,
+                to: friendId,
+                createdAt: Timestamp.fromDate(new Date()),
+                media: urlImg || "",
+                unread: true,
+            });
         } catch (e) {
             console.log(e)
         }
         setMessage('');
         setImgMess('');
-
     }
-
-    useEffect(() => {
-        // const collectionRef = collection(db, "chats");
-        // const q = query(collectionRef, orderBy("createdAt", "asc"));
-        // onSnapshot(q, (snap) => {
-        //     let msgs = [];
-        //     snap.forEach(doc => {
-        //         msgs.push(doc.data())
-        //     })
-        //     setMsgs(msgs);
-        // })
-
-    }, []);
-    console.log(msgs)
 
     return (
         <div className="w-full bg-gray-200 container mx-auto">
-            <div className="relative flex items-center p-3 border-b border-gray-300">
+            <div onClick={backHome} className="ml-6 text-blue-500">Quay lại Trang chủ</div>
+            <div className="relative flex items-center p-3 border-b border-gray-300 z-1">
                 <img className="object-cover w-10 h-10 rounded-full"
                      src={friend?.avatar || Avatar} alt="username"/>
                 <span className="block ml-2 font-bold text-gray-600">{friend?.name}</span>
-                <span
-                    className={`absolute w-3 h-3 bg-${friend.isOnline ? "green" : "red"}-600 rounded-full left-10 top-3`}>
-                </span>
+                {friend.isOnline ? <div className="ml-4 text-green-500">Online</div> : <div className="ml-4 text-gray-500">Ofline</div>}
             </div>
 
             <div className="relative w-full p-6 overflow-y-auto h-[40rem]">
                 <ul className="space-y-2">
-                    {(msgs||[]).map((mess, index) => {
-                        if (mess.from == userId) {
-                            return (
-                                <li className="flex justify-end" key={index}>
-                                    <div
-                                        className="relative max-w-xl px-4 py-2 text-gray-700 bg-gray-100 rounded shadow">
-                                        <span className="block">{mess.message}</span>
-                                    </div>
-                                </li>
-                            )
-                        }else {
-                            return (
-                                <li className="flex justify-start" key={index}>
-                                    <div className="relative max-w-xl px-4 py-2 text-gray-700 rounded shadow">
-                                        <span className="block">{mess.message}</span>
-                                    </div>
-                                </li>
-                            )
-                        }
+                    {msgs.length && msgs.map((msg, index) => {
+                        return (
+                            <li className={`flex justify-${msg.from==userId?"end":"start"}`} key={index}>
+                                {msg.media &&
+                                <img src={msg.media} alt={msg.message}/>
+                                }
+                                {msg.message}
+                            </li>
+                        )
                     })}
                 </ul>
             </div>
